@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/consul/api"
-	"github.com/nu7hatch/gouuid"
+	uuid "github.com/nu7hatch/gouuid"
 
 	"code.cloudfoundry.org/auctioneer"
 	"code.cloudfoundry.org/auctioneer/auctionmetricemitterdelegate"
@@ -41,6 +41,10 @@ import (
 	"github.com/tedsuo/ifrit/grouper"
 	"github.com/tedsuo/ifrit/http_server"
 	"github.com/tedsuo/ifrit/sigmon"
+
+	opentracing "github.com/opentracing/opentracing-go"
+	jaeger "github.com/uber/jaeger-client-go"
+	"github.com/uber/jaeger-client-go/zipkin"
 )
 
 var configFilePath = flag.String(
@@ -55,6 +59,27 @@ const (
 )
 
 func main() {
+	zipkinPropagator := zipkin.NewZipkinB3HTTPHeaderPropagator()
+	injector := jaeger.TracerOptions.Injector(opentracing.HTTPHeaders, zipkinPropagator)
+	extractor := jaeger.TracerOptions.Extractor(opentracing.HTTPHeaders, zipkinPropagator)
+
+	// Zipkin shares span ID between client and server spans; it must be enabled via the following option.
+	zipkinSharedRPCSpan := jaeger.TracerOptions.ZipkinSharedRPCSpan(true)
+
+	sender, _ := jaeger.NewUDPTransport("jaeger-agent.istio-system:5775", 0)
+	tracer, closer := jaeger.NewTracer(
+		"auctioneer",
+		jaeger.NewConstSampler(true),
+		jaeger.NewRemoteReporter(
+			sender,
+			jaeger.ReporterOptions.BufferFlushInterval(1*time.Second)),
+		injector,
+		extractor,
+		zipkinSharedRPCSpan,
+	)
+	defer closer.Close()
+	opentracing.SetGlobalTracer(tracer)
+
 	flag.Parse()
 
 	cfg, err := config.NewAuctioneerConfig(*configFilePath)

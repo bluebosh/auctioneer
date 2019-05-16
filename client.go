@@ -2,6 +2,7 @@ package auctioneer
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -9,13 +10,16 @@ import (
 
 	"code.cloudfoundry.org/cfhttp"
 	"code.cloudfoundry.org/lager"
+
+	"github.com/opentracing/opentracing-go"
+
 	"github.com/tedsuo/rata"
 )
 
 //go:generate counterfeiter -o auctioneerfakes/fake_client.go . Client
 type Client interface {
-	RequestLRPAuctions(logger lager.Logger, lrpStart []*LRPStartRequest) error
-	RequestTaskAuctions(logger lager.Logger, tasks []*TaskStartRequest) error
+	RequestLRPAuctions(ctx context.Context, logger lager.Logger, lrpStart []*LRPStartRequest) error
+	RequestTaskAuctions(ctx context.Context, logger lager.Logger, tasks []*TaskStartRequest) error
 }
 
 type auctioneerClient struct {
@@ -55,8 +59,12 @@ func NewSecureClient(auctioneerURL, caFile, certFile, keyFile string, requireTLS
 	}, nil
 }
 
-func (c *auctioneerClient) RequestLRPAuctions(logger lager.Logger, lrpStarts []*LRPStartRequest) error {
+func (c *auctioneerClient) RequestLRPAuctions(ctx context.Context, logger lager.Logger, lrpStarts []*LRPStartRequest) error {
 	logger = logger.Session("request-lrp-auctions")
+
+	span := opentracing.GlobalTracer().StartSpan("request-lrp-auction")
+	defer span.Finish()
+	ctx = opentracing.ContextWithSpan(ctx, span)
 
 	reqGen := rata.NewRequestGenerator(c.url, Routes)
 	payload, err := json.Marshal(lrpStarts)
@@ -70,6 +78,7 @@ func (c *auctioneerClient) RequestLRPAuctions(logger lager.Logger, lrpStarts []*
 	}
 
 	req.Header.Set("Content-Type", "application/json")
+	req = req.WithContext(ctx)
 
 	resp, err := c.doRequest(logger, req)
 	if err != nil {
@@ -84,8 +93,12 @@ func (c *auctioneerClient) RequestLRPAuctions(logger lager.Logger, lrpStarts []*
 	return nil
 }
 
-func (c *auctioneerClient) RequestTaskAuctions(logger lager.Logger, tasks []*TaskStartRequest) error {
+func (c *auctioneerClient) RequestTaskAuctions(ctx context.Context, logger lager.Logger, tasks []*TaskStartRequest) error {
 	logger = logger.Session("request-task-auctions")
+
+	span := opentracing.GlobalTracer().StartSpan("request-task-auction")
+	defer span.Finish()
+	ctx = opentracing.ContextWithSpan(ctx, span)
 
 	reqGen := rata.NewRequestGenerator(c.url, Routes)
 	payload, err := json.Marshal(tasks)
@@ -99,6 +112,7 @@ func (c *auctioneerClient) RequestTaskAuctions(logger lager.Logger, tasks []*Tas
 	}
 
 	req.Header.Set("Content-Type", "application/json")
+	req = req.WithContext(ctx)
 
 	resp, err := c.doRequest(logger, req)
 	if err != nil {

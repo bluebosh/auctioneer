@@ -1,6 +1,7 @@
 package auctionmetricemitterdelegate
 
 import (
+	"context"
 	"time"
 
 	"code.cloudfoundry.org/auction/auctiontypes"
@@ -34,7 +35,7 @@ func (d auctionMetricEmitterDelegate) FailedCellStateRequest() {
 	d.metronClient.IncrementCounter(FailedCellStateRequestCounter)
 }
 
-func (d auctionMetricEmitterDelegate) AuctionCompleted(results auctiontypes.AuctionResults) {
+func (d auctionMetricEmitterDelegate) AuctionCompleted(ctx context.Context, results auctiontypes.AuctionResults) {
 	d.metronClient.IncrementCounterWithDelta(LRPAuctionsStartedCounter, uint64(len(results.SuccessfulLRPs)))
 	d.metronClient.IncrementCounterWithDelta(TaskAuctionStartedCounter, uint64(len(results.SuccessfulTasks)))
 

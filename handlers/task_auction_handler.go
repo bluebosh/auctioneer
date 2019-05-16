@@ -54,7 +54,7 @@ func (h *TaskAuctionHandler) Create(w http.ResponseWriter, r *http.Request, logg
 		}
 	}
 
-	h.runner.ScheduleTasksForAuctions(validTasks)
+	h.runner.ScheduleTasksForAuctions(r.Context(), validTasks)
 
 	logger.Info("submitted", lager.Data{"tasks": taskGuids})
 	writeStatusAcceptedResponse(w)

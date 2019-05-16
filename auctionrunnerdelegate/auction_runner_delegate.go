@@ -1,6 +1,8 @@
 package auctionrunnerdelegate
 
 import (
+	"context"
+
 	"code.cloudfoundry.org/bbs"
 	"code.cloudfoundry.org/rep"
 
@@ -45,10 +47,10 @@ func (a *AuctionRunnerDelegate) FetchCellReps() (map[string]rep.Client, error) {
 	return cellReps, nil
 }
 
-func (a *AuctionRunnerDelegate) AuctionCompleted(results auctiontypes.AuctionResults) {
+func (a *AuctionRunnerDelegate) AuctionCompleted(ctx context.Context, results auctiontypes.AuctionResults) {
 	for i := range results.FailedTasks {
 		task := &results.FailedTasks[i]
-		err := a.bbsClient.RejectTask(a.logger, task.TaskGuid, task.PlacementError)
+		err := a.bbsClient.RejectTask(ctx, a.logger, task.TaskGuid, task.PlacementError)
 		if err != nil {
 			a.logger.Error("failed-to-reject-task", err, lager.Data{
 				"task":           task,
@@ -59,7 +61,7 @@ func (a *AuctionRunnerDelegate) AuctionCompleted(results auctiontypes.AuctionRes
 
 	for i := range results.FailedLRPs {
 		lrp := &results.FailedLRPs[i]
-		err := a.bbsClient.FailActualLRP(a.logger, &lrp.ActualLRPKey, lrp.PlacementError)
+		err := a.bbsClient.FailActualLRP(ctx, a.logger, &lrp.ActualLRPKey, lrp.PlacementError)
 		if err != nil {
 			a.logger.Error("failed-to-fail-LRP", err, lager.Data{
 				"lrp":            lrp,
