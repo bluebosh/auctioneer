@@ -8,8 +8,6 @@ import (
 	"code.cloudfoundry.org/auction/auctiontypes"
 	"code.cloudfoundry.org/auctioneer"
 	"code.cloudfoundry.org/lager"
-
-	opentracing "github.com/opentracing/opentracing-go"
 )
 
 type LRPAuctionHandler struct {
@@ -28,10 +26,6 @@ func (*LRPAuctionHandler) logSession(logger lager.Logger) lager.Logger {
 
 func (h *LRPAuctionHandler) Create(w http.ResponseWriter, r *http.Request, logger lager.Logger) {
 	logger = h.logSession(logger).Session("create")
-
-	span := opentracing.GlobalTracer().StartSpan("LRPAuctionHandler.Create")
-	defer span.Finish()
-	ctx := opentracing.ContextWithSpan(r.Context(), span)
 
 	payload, err := ioutil.ReadAll(r.Body)
 	if err != nil {
@@ -62,7 +56,7 @@ func (h *LRPAuctionHandler) Create(w http.ResponseWriter, r *http.Request, logge
 		}
 	}
 
-	h.runner.ScheduleLRPsForAuctions(ctx, validStarts)
+	h.runner.ScheduleLRPsForAuctions(validStarts)
 
 	logLRPGuids(lrpGuids, logger)
 

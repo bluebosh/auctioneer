@@ -1,12 +1,10 @@
 package auctionrunnerdelegate
 
 import (
-	"code.cloudfoundry.org/bbs"
-	"code.cloudfoundry.org/rep"
-	"golang.org/x/net/context"
-
 	"code.cloudfoundry.org/auction/auctiontypes"
+	"code.cloudfoundry.org/bbs"
 	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/rep"
 )
 
 type AuctionRunnerDelegate struct {
@@ -27,8 +25,8 @@ func New(
 	}
 }
 
-func (a *AuctionRunnerDelegate) FetchCellReps(ctx context.Context) (map[string]rep.Client, error) {
-	cells, err := a.bbsClient.Cells(ctx, a.logger)
+func (a *AuctionRunnerDelegate) FetchCellReps() (map[string]rep.Client, error) {
+	cells, err := a.bbsClient.Cells(a.logger)
 	cellReps := map[string]rep.Client{}
 	if err != nil {
 		return cellReps, err
